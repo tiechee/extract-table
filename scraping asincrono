@@ -1,6 +1,8 @@
+# INSTALLA PRIMA SDK
 !pip install aiohttp
 !pip install nest_asyncio
 
+# PROCEDI A SCRYPT
 import pandas as pd
 import aiohttp
 import asyncio
