@@ -1,0 +1,88 @@
+!pip install aiohttp
+
+import pandas as pd
+import aiohttp
+import asyncio
+from bs4 import BeautifulSoup
+from aiohttp import ClientSession
+
+# Percorso del file CSV di input e di output
+input_csv_path = '/content/webcolf_urls.csv'
+output_csv_path = '/content/seo_data_output.csv'  # Usa un nome univoco per il file di output
+
+# Caricamento di tutti gli URL dal file CSV di input
+urls_df = pd.read_csv(input_csv_path)
+all_urls = urls_df['URL']
+
+# Funzione asincrona per estrarre informazioni SEO da una pagina HTML
+async def fetch(session, url):
+    try:
+        async with session.get(url, timeout=10) as response:
+            response.raise_for_status()  # Aggiunge controllo sugli errori HTTP
+            html = await response.text()
+            soup = BeautifulSoup(html, 'html.parser')
+
+            # Estrai il titolo della pagina
+            title = soup.title.string if soup.title else 'No Title'
+
+            # Estrai la meta descrizione
+            description = soup.find('meta', attrs={'name': 'description'})
+            description_content = description['content'] if description else 'No Description'
+
+            # Estrai le meta keywords
+            keywords = soup.find('meta', attrs={'name': 'keywords'})
+            keywords_content = keywords['content'] if keywords else 'No Keywords'
+
+            # Estrai le intestazioni H1
+            h1_tags = [h1.get_text(strip=True) for h1 in soup.find_all('h1')]
+            h1_content = ', '.join(h1_tags) if h1_tags else 'No H1 Tags'
+
+            # Estrai l'URL canonico
+            canonical = soup.find('link', attrs={'rel': 'canonical'})
+            canonical_url = canonical['href'] if canonical else 'No Canonical URL'
+
+            return {
+                'URL': url,
+                'Title': title,
+                'Description': description_content,
+                'Keywords': keywords_content,
+                'H1 Tags': h1_content,
+                'Canonical URL': canonical_url
+            }
+    except Exception as e:
+        # Gestione degli errori di scraping
+        print(f"Errore durante lo scraping di {url}: {e}")
+        return {
+            'URL': url,
+            'Title': 'Errore',
+            'Description': str(e),
+            'Keywords': 'Errore',
+            'H1 Tags': 'Errore',
+            'Canonical URL': 'Errore'
+        }
+
+# Funzione principale per eseguire scraping asincrono sui URL
+async def scrape_all(urls):
+    async with ClientSession() as session:
+        tasks = [fetch(session, url) for url in urls]
+        return await asyncio.gather(*tasks)
+
+# Adatta l'esecuzione asincrona per l'ambiente Colab
+try:
+    # Utilizza nest_asyncio per Colab
+    import nest_asyncio
+    nest_asyncio.apply()
+
+    # Esegui lo scraping su tutti gli URL
+    loop = asyncio.get_event_loop()
+    scraped_data = loop.run_until_complete(scrape_all(all_urls))
+
+    # Crea un DataFrame con i dati di scraping SEO
+    scraped_df = pd.DataFrame(scraped_data)
+
+    # Salva il DataFrame in un file CSV di output con un nome univoco
+    scraped_df.to_csv(output_csv_path, index=False)
+
+    print(f"I dati SEO sono stati salvati in {output_csv_path}")
+except Exception as e:
+    print(f"Errore durante l'esecuzione asincrona: {e}")
