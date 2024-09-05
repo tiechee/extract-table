@@ -33,6 +33,44 @@ try:
     print(f"URLs estratti e salvati in {output_path}")
 
 except ET.ParseError as e:
+
+
     print(f"Errore durante il parsing del file XML: {e}")
 except FileNotFoundError:
     print("File XML non trovato. Assicurati che il percorso del file sia corretto.")
+
+
+#-----------------OPPURE USA QUESTO SENZA CARICARE FILE DENTRO COLAB
+
+import requests
+import xml.etree.ElementTree as ET
+import pandas as pd
+
+# URL del file XML
+xml_url = 'https://www.webcolf.com/webcolf_new.xml'
+
+# Scarica il file XML
+response = requests.get(xml_url)
+xml_content = response.content
+
+# Salva il file XML scaricato in Colab (opzionale)
+with open('/content/webcolf_new.xml', 'wb') as file:
+    file.write(xml_content)
+
+# Parsa il contenuto XML con gestione del namespace
+root = ET.fromstring(xml_content)
+
+# Trova il namespace se presente
+namespace = {'ns': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+
+# Estrai gli URL dai tag <loc> con il namespace corretto
+urls = [url.text for url in root.findall('.//ns:loc', namespace)]
+
+# Crea un DataFrame con gli URL
+df = pd.DataFrame(urls, columns=['URL'])
+
+# Salva il DataFrame in un file CSV
+csv_path = '/content/webcolf_urls.csv'
+df.to_csv(csv_path, index=False)
+
+print(f"URLs estratti e salvati in {csv_path}")
