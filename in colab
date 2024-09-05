@@ -1,0 +1,38 @@
+ # 1) aggiornare versione di Panda a 2.1.4 potrebbe generare conflitto
+
+import pandas as pd
+print(pd.__version__)
+
+
+# 2 estrarre url da xml e salvare csv
+import xml.etree.ElementTree as ET
+import pandas as pd
+
+# Percorso del file XML in Colab
+file_path = '/content/sitemap.xml'
+
+try:
+    # Leggi e parsa l'XML
+    tree = ET.parse(file_path)
+    root = tree.getroot()
+
+    # Estrai gli URL dai tag <loc> utilizzando il namespace corretto
+    urls = [url.text for url in root.findall('.//{https://www.sitemaps.org/schemas/sitemap/0.9}loc')]
+
+    # Verifica se gli URL sono stati trovati
+    if not urls:
+        print("Nessun URL trovato nel file XML. Verifica la struttura del file e il namespace.")
+
+    # Crea un DataFrame con gli URL
+    df = pd.DataFrame(urls, columns=['URL'])
+
+    # Salva in un file CSV
+    output_path = '/content/urls.csv'
+    df.to_csv(output_path, index=False)
+
+    print(f"URLs estratti e salvati in {output_path}")
+
+except ET.ParseError as e:
+    print(f"Errore durante il parsing del file XML: {e}")
+except FileNotFoundError:
+    print("File XML non trovato. Assicurati che il percorso del file sia corretto.")
